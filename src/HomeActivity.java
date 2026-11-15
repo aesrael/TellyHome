@@ -5,6 +5,7 @@ import android.app.Dialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -143,6 +144,7 @@ public class HomeActivity extends Activity {
     private static class AppEntry {
         String label, packageName, className;
         Drawable banner, icon;
+        long updated, lastUsed;
     }
 
     // ====================================================================
@@ -204,7 +206,12 @@ public class HomeActivity extends Activity {
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK) return true; // this is the home screen
+        if (keyCode == KeyEvent.KEYCODE_BACK) { // this is the home screen: Back returns to the top
+            newsScroll.scrollTo(0, 0);
+            appsScroll.scrollTo(0, 0);
+            openStoryButton.requestFocus();
+            return true;
+        }
         if (keyCode == KeyEvent.KEYCODE_MENU) {
             openSystemSettings();
             return true;
@@ -463,7 +470,7 @@ public class HomeActivity extends Activity {
         }
         View leftScrim = new View(this);
         leftScrim.setBackground(gradient(GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{0xB3F2F6FB, 0x66F2F6FB, 0x00F2F6FB}));
+                new int[]{0xCCF2F6FB, 0x88F2F6FB, 0x00F2F6FB}));
         backdrop.addView(leftScrim, new FrameLayout.LayoutParams(px(1150),
                 ViewGroup.LayoutParams.MATCH_PARENT));
         View topScrim = new View(this);
@@ -537,7 +544,7 @@ public class HomeActivity extends Activity {
                 item.addView(new Glyph(this, Glyph.HOME, COLOR_NAVY),
                         llp(px(36), px(36), 0, 0, px(14), 0));
             }
-            TextView label = text(NAV_LABELS[i], px(28), COLOR_MUTED, SANS);
+            TextView label = text(NAV_LABELS[i], px(28), 0xFF3F4B5E, SANS);
             item.addView(label);
             StateListDrawable bg = new StateListDrawable();
             bg.addState(new int[]{android.R.attr.state_focused}, rect(0xFFFFFFFF, px(35), px(4), COLOR_FOCUS));
@@ -554,7 +561,7 @@ public class HomeActivity extends Activity {
                     ViewGroup.LayoutParams.WRAP_CONTENT, px(70)));
         }
         root.addView(tabs, flp(ViewGroup.LayoutParams.WRAP_CONTENT, px(70),
-                Gravity.TOP | Gravity.LEFT, px(76), px(55), 0, 0));
+                Gravity.TOP | Gravity.LEFT, px(96), px(55), 0, 0));
 
         LinearLayout right = new LinearLayout(this);
         right.setOrientation(LinearLayout.HORIZONTAL);
@@ -589,14 +596,14 @@ public class HomeActivity extends Activity {
         right.addView(gear, llp(px(80), px(80), px(40), 0, 0, 0));
 
         root.addView(right, flp(ViewGroup.LayoutParams.WRAP_CONTENT, px(80),
-                Gravity.TOP | Gravity.RIGHT, 0, px(50), px(76), 0));
+                Gravity.TOP | Gravity.RIGHT, 0, px(54), px(96), 0));
     }
 
     private void updateNavigationStyles() {
         for (int i = 0; i < navItems.length; i++) {
             boolean selected = (i == NAV_HOME);
             navItems[i].setSelected(selected);
-            navLabels[i].setTextColor(selected ? COLOR_TEXT : COLOR_MUTED);
+            navLabels[i].setTextColor(selected ? COLOR_TEXT : 0xFF3F4B5E);
             navLabels[i].setTypeface(selected ? MEDIUM : SANS);
         }
     }
@@ -639,7 +646,8 @@ public class HomeActivity extends Activity {
         heroBox.addView(heroTitle, llp(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 0, px(8), 0, 0));
 
-        heroDescription = text("Connecting to BBC and Sky news feeds", px(26), COLOR_MUTED, SANS);
+        heroDescription = text("Connecting to BBC and Sky news feeds", px(26), 0xFF3E4A5A, SANS);
+        heroDescription.setShadowLayer(px(6), 0, 0, 0xEEF2F5FA); // readable over busy photos
         heroDescription.setMinLines(2);
         heroDescription.setMaxLines(2);
         heroDescription.setEllipsize(TextUtils.TruncateAt.END);
@@ -669,7 +677,7 @@ public class HomeActivity extends Activity {
 
         heroBox.setClipChildren(false);
         root.addView(heroBox, flp(px(1000), ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP | Gravity.LEFT, px(108), px(190), 0, 0));
+                Gravity.TOP | Gravity.LEFT, px(128), px(190), 0, 0));
     }
 
     private LinearLayout createActionButton(String label, int glyphKind, boolean primary,
@@ -703,6 +711,7 @@ public class HomeActivity extends Activity {
         Story s = stories.get(Math.min(currentStory, stories.size() - 1));
         heroKicker.setText("Top story \u00b7 " + s.source);
         heroTitle.setText(s.title);
+        heroTitle.setTextSize(TypedValue.COMPLEX_UNIT_PX, s.title.length() > 70 ? px(46) : px(60)); // long headlines fit two lines instead of cutting mid-word
         heroDescription.setText(TextUtils.isEmpty(s.summary) ? s.source : s.summary);
     }
 
@@ -766,14 +775,14 @@ public class HomeActivity extends Activity {
     private void createNewsSection() {
         root.addView(text("Latest news", px(28), COLOR_TEXT, MEDIUM), flp(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP | Gravity.LEFT, px(108), px(598), 0, 0));
+                Gravity.TOP | Gravity.LEFT, px(128), px(598), 0, 0));
 
         newsScroll = new HorizontalScrollView(this);
         newsScroll.setHorizontalScrollBarEnabled(false);
         newsScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
         newsScroll.setClipToPadding(false);
         newsScroll.setClipChildren(false);
-        newsScroll.setPadding(px(108), px(16), px(108), px(16));
+        newsScroll.setPadding(px(128), px(16), px(128), px(16));
         newsRow = new LinearLayout(this);
         newsRow.setOrientation(LinearLayout.HORIZONTAL);
         newsRow.setClipChildren(false);
@@ -823,11 +832,11 @@ public class HomeActivity extends Activity {
         info.setOrientation(LinearLayout.VERTICAL);
         info.setGravity(Gravity.BOTTOM);
         info.setPadding(px(18), px(14), px(18), px(16));
-        TextView title = text(s.title, px(24), Color.WHITE, BOLD);
+        TextView title = text(s.title, px(26), Color.WHITE, BOLD);
         title.setMaxLines(2);
         title.setEllipsize(TextUtils.TruncateAt.END);
         info.addView(title);
-        info.addView(text(s.source, px(20), 0xFFD5DDE8, SANS), llp(
+        info.addView(text(s.source, px(24), 0xFFE3E9F1, SANS), llp(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 0, px(4), 0, 0));
         card.addView(info, new FrameLayout.LayoutParams(
@@ -861,12 +870,24 @@ public class HomeActivity extends Activity {
         });
     }
 
+    private final android.util.LruCache<String, Bitmap> thumbCache = new android.util.LruCache<String, Bitmap>(24);
+
     private Bitmap fetchBitmap(String url) {
+        Bitmap cached = thumbCache.get(url);
+        if (cached != null) return cached; // news refreshes re-render the same cards: don't re-download
         HttpURLConnection c = null;
         try {
             c = open(url);
-            InputStream in = new BufferedInputStream(c.getInputStream());
-            return BitmapFactory.decodeStream(in);
+            byte[] data = readBytes(c.getInputStream());
+            BitmapFactory.Options o = new BitmapFactory.Options();
+            o.inJustDecodeBounds = true;
+            BitmapFactory.decodeByteArray(data, 0, data.length, o);
+            o.inSampleSize = 1;
+            while (o.outWidth / (o.inSampleSize * 2) >= 800) o.inSampleSize *= 2; // cards are ~400px; never hold 1080p
+            o.inJustDecodeBounds = false;
+            Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, o);
+            if (bmp != null) thumbCache.put(url, bmp);
+            return bmp;
         } catch (Exception e) {
             return null;
         } finally {
@@ -879,13 +900,13 @@ public class HomeActivity extends Activity {
     private void createAppsSection() {
         root.addView(text("Your apps", px(28), COLOR_TEXT, MEDIUM), flp(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.TOP | Gravity.LEFT, px(108), px(864), 0, 0));
+                Gravity.TOP | Gravity.LEFT, px(128), px(864), 0, 0));
         appsScroll = new HorizontalScrollView(this);
         appsScroll.setHorizontalScrollBarEnabled(false);
         appsScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
         appsScroll.setClipToPadding(false);
         appsScroll.setClipChildren(false);
-        appsScroll.setPadding(px(108), px(16), px(108), px(16));
+        appsScroll.setPadding(px(128), px(16), px(128), px(16));
         appsRow = new LinearLayout(this);
         appsRow.setOrientation(LinearLayout.HORIZONTAL);
         appsRow.setClipChildren(false);
@@ -902,7 +923,7 @@ public class HomeActivity extends Activity {
                 mainHandler.post(new Runnable() {
                     @Override public void run() {
                         StringBuilder sig = new StringBuilder();
-                        for (AppEntry a : apps) sig.append(a.packageName).append('|');
+                        for (AppEntry a : apps) sig.append(a.packageName).append(':').append(a.updated).append(':').append(a.lastUsed).append('|'); // updates refresh banners too
                         installedApps = apps;
                         if (!sig.toString().equals(appsSig)) {
                             appsSig = sig.toString();
@@ -916,6 +937,7 @@ public class HomeActivity extends Activity {
 
     private List<AppEntry> queryApps() {
         PackageManager pm = getPackageManager();
+        SharedPreferences usage = getSharedPreferences("app_usage", MODE_PRIVATE);
         Set<String> seen = new HashSet<String>();
         List<AppEntry> out = new ArrayList<AppEntry>();
         String[] hide = {"copydata", "backuptransport", "configupdater", "partnercustomizer"};
@@ -937,7 +959,9 @@ public class HomeActivity extends Activity {
                 if (!seen.add(ai.packageName)) continue;
                 AppEntry e = new AppEntry();
                 e.packageName = ai.packageName;
+                try { e.updated = pm.getPackageInfo(ai.packageName, 0).lastUpdateTime; } catch (Exception ignored) { }
                 e.className = ai.name;
+                e.lastUsed = usage.getLong(ai.packageName, 0L);
                 e.label = String.valueOf(ri.loadLabel(pm));
                 Drawable banner = null;
                 try {
@@ -953,6 +977,7 @@ public class HomeActivity extends Activity {
         }
         Collections.sort(out, new Comparator<AppEntry>() {
             @Override public int compare(AppEntry a, AppEntry b) {
+                if (a.lastUsed != b.lastUsed) return a.lastUsed > b.lastUsed ? -1 : 1; // recently opened first
                 int ia = orderIndex(a), ib = orderIndex(b);
                 if (ia != ib) return ia < ib ? -1 : 1;
                 return a.label.compareToIgnoreCase(b.label);
@@ -1001,7 +1026,7 @@ public class HomeActivity extends Activity {
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
             icon.setImageDrawable(app.icon);
             col.addView(icon, llp(px(iconOnly ? 64 : 52), px(iconOnly ? 64 : 52), 0, 0, 0, px(6)));
-            TextView label = text(app.label, px(20), COLOR_TEXT, SANS);
+            TextView label = text(app.label, px(24), COLOR_TEXT, SANS);
             label.setSingleLine(true);
             label.setEllipsize(TextUtils.TruncateAt.END);
             label.setGravity(Gravity.CENTER);
@@ -1027,7 +1052,7 @@ public class HomeActivity extends Activity {
         col.setOrientation(LinearLayout.VERTICAL);
         col.setGravity(Gravity.CENTER);
         col.addView(new Glyph(this, Glyph.GRID, 0xFF6B7686), llp(px(48), px(48), 0, 0, 0, px(4)));
-        col.addView(text("All Apps", px(20), COLOR_TEXT, SANS));
+        col.addView(text("All Apps", px(24), COLOR_TEXT, SANS));
         tile.addView(col, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         tile.setForeground(ringForeground(r));
@@ -1099,6 +1124,7 @@ public class HomeActivity extends Activity {
     }
 
     private void launchApp(AppEntry app) {
+        getSharedPreferences("app_usage", MODE_PRIVATE).edit().putLong(app.packageName, System.currentTimeMillis()).apply();
         try {
             Intent i = new Intent(Intent.ACTION_MAIN);
             i.setClassName(app.packageName, app.className);
@@ -1179,11 +1205,25 @@ public class HomeActivity extends Activity {
         return c;
     }
 
+    private byte[] readBytes(InputStream in) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = in.read(buf)) > 0) {
+            out.write(buf, 0, n);
+            if (out.size() > 8 * 1024 * 1024) throw new IOException("image too large");
+        }
+        return out.toByteArray();
+    }
+
     private String readAll(InputStream in) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         byte[] buf = new byte[4096];
         int n;
-        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+        while ((n = in.read(buf)) > 0) {
+            out.write(buf, 0, n);
+            if (out.size() > 4 * 1024 * 1024) throw new IOException("response too large");
+        }
         return out.toString("UTF-8");
     }
 
@@ -1297,10 +1337,10 @@ public class HomeActivity extends Activity {
                         s.summary = cleanFeedText(p.nextText());
                     } else if ("link".equals(tag)) {
                         s.link = p.nextText().trim();
-                    } else if ("media:thumbnail".equals(tag)) {
+                    } else if ("media:thumbnail".equals(tag) || "thumbnail".equals(tag)) {
                         String u = p.getAttributeValue(null, "url");
                         if (!TextUtils.isEmpty(u)) s.imageUrl = u;
-                    } else if ("enclosure".equals(tag) || "media:content".equals(tag)) {
+                    } else if ("enclosure".equals(tag) || "media:content".equals(tag) || "content".equals(tag)) {
                         String u = p.getAttributeValue(null, "url");
                         String type = p.getAttributeValue(null, "type");
                         if (s.imageUrl == null && !TextUtils.isEmpty(u)
